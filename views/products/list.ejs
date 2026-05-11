@@ -1,0 +1,68 @@
+<%- include('../partials/header') %>
+<div class="page-header-row">
+  <div>
+    <h1><%= t('products') %></h1>
+    <p class="muted"><%= products.length %> total</p>
+  </div>
+  <a href="/app/products/new" class="btn btn-primary">+ <%= t('add_new') %></a>
+</div>
+
+<form method="GET" class="search-bar">
+  <input type="text" name="q" value="<%= q %>" placeholder="<%= t('search') %>...">
+  <select name="cat">
+    <option value="">All categories</option>
+    <% categories.forEach(c => { %>
+      <option value="<%= c %>" <%= cat === c ? 'selected' : '' %>><%= c %></option>
+    <% }); %>
+  </select>
+  <button type="submit" class="btn btn-outline"><%= t('search') %></button>
+</form>
+
+<div class="card no-pad">
+  <% if (products.length === 0) { %>
+    <div class="empty-state">
+      <p><%= t('no_data') %></p>
+      <a href="/app/products/new" class="btn btn-primary">+ <%= t('add_new') %></a>
+    </div>
+  <% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th><%= t('name') %></th>
+        <th><%= t('category') %></th>
+        <th class="num"><%= t('price') %></th>
+        <th><%= t('unit') %></th>
+        <th class="num"><%= t('stock') %></th>
+        <th><%= t('vat') %></th>
+        <th class="actions-col"><%= t('actions') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% products.forEach(p => { %>
+        <tr>
+          <td>
+            <%= p.name %>
+            <% if (p.name_ne) { %><span class="alt-name"><%= p.name_ne %></span><% } %>
+          </td>
+          <td><%= p.category || '—' %></td>
+          <td class="num"><%= fmt.moneyPlain(p.price) %></td>
+          <td><%= p.unit %></td>
+          <td class="num">
+            <% if (p.track_stock) { %>
+              <span class="<%= p.stock <= p.low_stock_threshold ? 'warning' : '' %>"><%= p.stock %></span>
+            <% } else { %>—<% } %>
+          </td>
+          <td><%= p.vat_applicable ? '✓' : '—' %></td>
+          <td class="actions">
+            <a href="/app/products/<%= p.id %>/edit" class="btn-icon"><%= t('edit') %></a>
+            <form method="POST" action="/app/products/<%= p.id %>/delete" style="display:inline" onsubmit="return confirm('<%= t('confirm_delete') %>')">
+              <button type="submit" class="btn-icon danger"><%= t('delete') %></button>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+<%- include('../partials/footer') %>

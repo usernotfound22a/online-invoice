@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="<%= lang %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %> · <%= t('app_name') %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<% if (user) { %>
+<nav class="navbar">
+  <div class="nav-inner">
+    <a class="brand" href="/<%= user.is_admin ? 'admin' : 'app' %>">
+      <span class="brand-icon">📄</span>
+      <span class="brand-text"><%= t('app_name') %></span>
+    </a>
+    <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
+    <div class="nav-links" id="navLinks">
+      <% if (!user.is_admin) { %>
+      <a href="/app" class="<%= title === t('dashboard') || title === 'Dashboard' ? 'active' : '' %>"><%= t('dashboard') %></a>
+      <a href="/app/customers"><%= t('customers') %></a>
+      <a href="/app/products"><%= t('products') %></a>
+      <a href="/app/invoices"><%= t('invoices') %></a>
+      <a href="/app/settings"><%= t('settings') %></a>
+      <% } else { %>
+      <a href="/admin" class="active"><%= t('admin') %></a>
+      <% } %>
+    </div>
+    <div class="nav-right" id="navRight">
+      <div class="lang-toggle">
+        <a href="/lang/en" class="<%= lang === 'en' ? 'active' : '' %>">EN</a>
+        <a href="/lang/ne" class="<%= lang === 'ne' ? 'active' : '' %>">ने</a>
+      </div>
+      <div class="user-menu">
+        <span class="user-name"><%= user.business_name %></span>
+        <a href="/auth/logout" class="logout-btn"><%= t('logout') %></a>
+      </div>
+    </div>
+  </div>
+</nav>
+<% } %>
+
+<script>
+function toggleMobileMenu() {
+  const navLinks = document.getElementById('navLinks');
+  const navRight = document.getElementById('navRight');
+  navLinks.classList.toggle('show');
+  navRight.classList.toggle('show');
+}
+// Close menu when clicking a link
+document.addEventListener('DOMContentLoaded', function() {
+  const navLinks = document.querySelectorAll('#navLinks a');
+  navLinks.forEach(link => {
+    link.addEventListener('click', function() {
+      document.getElementById('navLinks').classList.remove('show');
+      document.getElementById('navRight').classList.remove('show');
+    });
+  });
+});
+</script>
+
+<% if (flash) { %>
+<div class="flash flash-<%= flash.type %>"><%= flash.msg %></div>
+<% } %>
+
+<main class="container">

@@ -1,0 +1,56 @@
+<%- include('../partials/header') %>
+<div class="page-header-row">
+  <div>
+    <h1><%= t('customers') %></h1>
+    <p class="muted"><%= customers.length %> total</p>
+  </div>
+  <a href="/app/customers/new" class="btn btn-primary">+ <%= t('add_new') %></a>
+</div>
+
+<form method="GET" class="search-bar">
+  <input type="text" name="q" value="<%= q %>" placeholder="<%= t('search') %>...">
+  <button type="submit" class="btn btn-outline"><%= t('search') %></button>
+</form>
+
+<div class="card no-pad">
+  <% if (customers.length === 0) { %>
+    <div class="empty-state">
+      <p><%= t('no_data') %></p>
+      <a href="/app/customers/new" class="btn btn-primary">+ <%= t('add_new') %></a>
+    </div>
+  <% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th><%= t('name') %></th>
+        <th><%= t('phone') %></th>
+        <th><%= t('pan') %></th>
+        <th><%= t('email') %></th>
+        <th class="actions-col"><%= t('actions') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% customers.forEach(c => { %>
+        <tr>
+          <td data-label="Name">
+            <a href="/app/customers/<%= c.id %>" class="link-name">
+              <%= c.name %>
+              <% if (c.name_ne) { %><span class="alt-name"><%= c.name_ne %></span><% } %>
+            </a>
+          </td>
+          <td data-label="Phone"><%= c.phone || '—' %></td>
+          <td data-label="PAN"><%= c.pan || '—' %></td>
+          <td data-label="Email"><%= c.email || '—' %></td>
+          <td class="actions" data-label="Actions">
+            <a href="/app/customers/<%= c.id %>/edit" class="btn-icon"><%= t('edit') %></a>
+            <form method="POST" action="/app/customers/<%= c.id %>/delete" style="display:inline" onsubmit="return confirm('<%= t('confirm_delete') %>')">
+              <button type="submit" class="btn-icon danger"><%= t('delete') %></button>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+<%- include('../partials/footer') %>

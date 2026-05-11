@@ -1,0 +1,23 @@
+<%- include('partials/header') %>
+<div class="landing">
+  <div class="landing-hero">
+    <h1><%= t('app_name') %></h1>
+    <p class="lead">Online invoice billing for Pokhara businesses · नेपालका व्यवसायहरूको लागि अनलाइन बीजक</p>
+    <div class="hero-features">
+      <div class="feat">✓ Nepal 13% VAT</div>
+      <div class="feat">✓ Customer database</div>
+      <div class="feat">✓ Product inventory</div>
+      <div class="feat">✓ PDF & Print</div>
+      <div class="feat">✓ Bilingual (EN / नेपाली)</div>
+    </div>
+    <div class="hero-actions">
+      <a href="/auth/login" class="btn btn-primary"><%= t('login') %></a>
+      <a href="/auth/signup" class="btn btn-outline"><%= t('signup') %></a>
+    </div>
+    <div class="lang-toggle landing-lang">
+      <a href="/lang/en" class="<%= lang === 'en' ? 'active' : '' %>">EN</a>
+      <a href="/lang/ne" class="<%= lang === 'ne' ? 'active' : '' %>">ने</a>
+    </div>
+  </div>
+</div>
+<%- include('partials/footer') %>

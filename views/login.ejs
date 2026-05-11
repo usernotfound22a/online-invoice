@@ -1,0 +1,25 @@
+<%- include('partials/header') %>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1><%= t('login') %></h1>
+    <% if (error) { %><div class="alert alert-error"><%= error %></div><% } %>
+    <form method="POST" action="/auth/login">
+      <label><%= t('email') %></label>
+      <input type="email" name="email" required autofocus>
+      <label><%= t('password') %></label>
+      <input type="password" name="password" required>
+      <button type="submit" class="btn btn-primary btn-block"><%= t('login') %></button>
+    </form>
+    <p class="auth-alt">Don't have an account? <a href="/auth/signup"><%= t('signup') %></a></p>
+    <div class="demo-creds">
+      <strong>Demo credentials:</strong><br>
+      Business: demo@pokhara.local / demo1234<br>
+      Admin: admin@pokhara.local / admin1234
+    </div>
+    <div class="lang-toggle auth-lang">
+      <a href="/lang/en" class="<%= lang === 'en' ? 'active' : '' %>">EN</a>
+      <a href="/lang/ne" class="<%= lang === 'ne' ? 'active' : '' %>">ने</a>
+    </div>
+  </div>
+</div>
+<%- include('partials/footer') %>

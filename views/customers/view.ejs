@@ -1,0 +1,65 @@
+<%- include('../partials/header') %>
+<div class="page-header-row">
+  <div>
+    <h1><%= customer.name %></h1>
+    <% if (customer.name_ne) { %><p class="muted"><%= customer.name_ne %></p><% } %>
+  </div>
+  <div class="header-actions">
+    <a href="/app/customers/<%= customer.id %>/edit" class="btn btn-outline"><%= t('edit') %></a>
+  </div>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Billed</div>
+    <div class="stat-value"><%= fmt.moneyPlain(stats.billed) %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><%= t('paid') %></div>
+    <div class="stat-value"><%= fmt.moneyPlain(stats.paid) %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><%= t('outstanding') %></div>
+    <div class="stat-value warning"><%= fmt.moneyPlain(stats.outstanding) %></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Contact details</h2>
+  <table class="kv-table">
+    <tr><td><%= t('phone') %></td><td><%= customer.phone || '—' %></td></tr>
+    <tr><td><%= t('email') %></td><td><%= customer.email || '—' %></td></tr>
+    <tr><td><%= t('pan') %></td><td><%= customer.pan || '—' %></td></tr>
+    <tr><td><%= t('address') %></td><td><%= customer.address || '—' %></td></tr>
+    <% if (customer.notes) { %><tr><td><%= t('notes') %></td><td><%= customer.notes %></td></tr><% } %>
+  </table>
+</div>
+
+<div class="card no-pad">
+  <h2 class="card-h2-pad"><%= t('invoices') %> (<%= invoices.length %>)</h2>
+  <% if (invoices.length === 0) { %>
+    <p class="empty"><%= t('no_data') %></p>
+  <% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th><%= t('invoice_number') %></th>
+        <th><%= t('invoice_date') %></th>
+        <th><%= t('status') %></th>
+        <th class="num"><%= t('total') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% invoices.forEach(inv => { %>
+        <tr>
+          <td><a href="/app/invoices/<%= inv.id %>"><%= inv.invoice_number %></a></td>
+          <td><%= fmt.date(inv.invoice_date) %></td>
+          <td><span class="badge badge-<%= inv.status %>"><%= inv.status %></span></td>
+          <td class="num"><%= fmt.moneyPlain(inv.total) %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+<%- include('../partials/footer') %>

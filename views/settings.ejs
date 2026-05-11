@@ -1,0 +1,55 @@
+<%- include('partials/header') %>
+<div class="page-header">
+  <h1><%= t('settings') %></h1>
+</div>
+
+<div class="card form-card">
+  <form method="POST" action="/app/settings" enctype="multipart/form-data">
+    <h2 class="form-section-h"><%= t('business_profile') %></h2>
+
+    <label><%= t('business_name') %> *</label>
+    <input type="text" name="business_name" required value="<%= business.business_name %>">
+
+    <label><%= t('business_name_ne') %></label>
+    <input type="text" name="business_name_ne" value="<%= business.business_name_ne || '' %>" placeholder="नेपालीमा">
+
+    <div class="grid-2">
+      <div>
+        <label><%= t('pan') %></label>
+        <input type="text" name="pan" value="<%= business.pan || '' %>">
+      </div>
+      <div>
+        <label><%= t('phone') %></label>
+        <input type="text" name="phone" value="<%= business.phone || '' %>">
+      </div>
+    </div>
+
+    <label><%= t('address') %></label>
+    <input type="text" name="address" value="<%= business.address || '' %>">
+
+    <label>Logo (optional, max 2MB)</label>
+    <input type="file" name="logo" accept="image/*">
+    <% if (business.logo_path) { %><p class="muted">Current: <img src="<%= business.logo_path %>" style="max-height:40px; vertical-align:middle;"></p><% } %>
+
+    <h2 class="form-section-h"><%= t('invoice_settings') %></h2>
+
+    <div class="grid-2">
+      <div>
+        <label><%= t('vat_rate') %></label>
+        <input type="number" name="vat_rate" step="0.01" value="<%= business.vat_rate || 13 %>">
+      </div>
+      <div>
+        <label><%= t('invoice_prefix') %></label>
+        <input type="text" name="invoice_prefix" value="<%= business.invoice_prefix || 'INV' %>">
+      </div>
+    </div>
+
+    <label><%= t('footer_note') %></label>
+    <textarea name="footer_note" rows="2"><%= business.footer_note || '' %></textarea>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><%= t('update') %></button>
+    </div>
+  </form>
+</div>
+<%- include('partials/footer') %>

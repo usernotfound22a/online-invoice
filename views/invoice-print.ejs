@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="<%= lang %>">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Inter', 'Noto Sans Devanagari', sans-serif;
+      margin: 0; padding: 15px; color: #000; background: #f5f5f5;
+    }
+    .invoice-paper {
+      max-width: 900px; margin: 0 auto; background: white;
+      padding: 30px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .company-header {
+      text-align: center; padding-bottom: 15px; margin-bottom: 20px; border-bottom: 2px dotted #999;
+    }
+    .company-name { font-size: 22px; font-weight: 700; margin: 0; }
+    .company-meta { font-size: 12px; color: #333; margin: 3px 0; line-height: 1.4; }
+    .tax-invoice-title { font-size: 18px; font-weight: 700; margin: 5px 0 0; }
+    
+    .header-row {
+      display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 13px;
+    }
+    .header-field { flex: 1; }
+    .header-field label { font-weight: 600; margin-right: 8px; }
+    .header-field .underline { border-bottom: 1px dotted #999; min-width: 150px; display: inline-block; }
+    
+    .buyer-section {
+      margin: 15px 0; font-size: 13px;
+    }
+    .buyer-row {
+      display: flex; align-items: center; margin: 6px 0;
+    }
+    .buyer-label { font-weight: 600; width: 130px; }
+    .buyer-value { flex: 1; border-bottom: 1px dotted #999; }
+    .pan-boxes {
+      display: flex; gap: 4px; margin-top: 3px;
+    }
+    .pan-box {
+      width: 24px; height: 24px; border: 1px solid #000; display: flex;
+      align-items: center; justify-content: center; font-size: 10px; font-weight: 600;
+    }
+    
+    .items {
+      width: 100%; border-collapse: collapse; margin: 15px 0;
+    }
+    .items th {
+      background: #f0f0f0; border: 1px solid #000; padding: 8px;
+      text-align: left; font-size: 12px; font-weight: 600;
+    }
+    .items th.num { text-align: right; }
+    .items td {
+      padding: 8px; border: 1px solid #000; font-size: 12px;
+    }
+    .items td.num { text-align: right; }
+    
+    .summary-section {
+      display: flex; gap: 30px; margin-top: 15px; font-size: 12px;
+    }
+    .amount-words {
+      flex: 1;
+    }
+    .totals-table {
+      width: 350px;
+    }
+    .summary-row {
+      display: flex; padding: 6px 0; border-bottom: 1px solid #ddd;
+    }
+    .summary-label { flex: 1; font-weight: 600; }
+    .summary-value { width: 100px; text-align: right; border-bottom: 1px dotted #999; }
+    .summary-row.total {
+      border-bottom: 2px solid #000; font-weight: 700;
+    }
+    
+    .signature-section {
+      display: flex; justify-content: space-between; margin-top: 40px; font-size: 11px;
+    }
+    .sig-block {
+      width: 200px; border-top: 1px solid #000; padding-top: 8px; text-align: center;
+    }
+    
+    .footer-note {
+      text-align: center; margin-top: 20px; font-size: 11px; color: #555;
+      padding-top: 10px; border-top: 1px solid #ddd;
+    }
+    
+    .print-bar {
+      max-width: 900px; margin: 0 auto 16px; display: flex; gap: 10px; justify-content: flex-end;
+    }
+    .print-bar button, .print-bar a {
+      padding: 8px 16px; background: #333; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none;
+    }
+    .print-bar a.outline { background: white; color: #333; border: 1px solid #333; }
+    
+    @media print {
+      body { background: white; padding: 0; margin: 0; }
+      .invoice-paper { box-shadow: none; padding: 15px; margin: 0; }
+      .print-bar { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="print-bar">
+  <button onclick="window.print()">🖨 Print / Save PDF</button>
+  <% if (!isPublic) { %><a href="/app/invoices/<%= invoice.id %>" class="outline">← Back</a><% } %>
+</div>
+
+<div class="invoice-paper">
+  <!-- COMPANY HEADER -->
+  <div class="company-header">
+    <div class="company-name"><%= invoice.business_name %></div>
+    <% if (invoice.business_name_ne) { %><div class="company-meta"><%= invoice.business_name_ne %></div><% } %>
+    <% if (invoice.business_address) { %><div class="company-meta"><%= invoice.business_address %></div><% } %>
+    <% if (invoice.business_phone) { %><div class="company-meta">Tel/Mob: <%= invoice.business_phone %></div><% } %>
+    <% if (invoice.business_email) { %><div class="company-meta">Email: <%= invoice.business_email %></div><% } %>
+    <div class="tax-invoice-title">TAX INVOICE</div>
+  </div>
+
+  <!-- INVOICE META -->
+  <div class="header-row">
+    <div class="header-field">
+      <label>Invoice No:</label>
+      <strong><%= invoice.invoice_number %></strong>
+    </div>
+    <div class="header-field">
+      <label>Transaction Date:</label>
+      <div class="underline" style="text-align: right;"><%= fmt.date(invoice.invoice_date) %></div>
+    </div>
+  </div>
+
+  <div class="header-row">
+    <div class="header-field">
+      <label>Seller's PAN No:</label>
+      <% if (invoice.business_pan) { %><strong><%= invoice.business_pan %></strong><% } else { %><div class="underline"></div><% } %>
+    </div>
+    <div class="header-field">
+      <label>Bill Issuing Date:</label>
+      <div class="underline" style="text-align: right;"><%= fmt.date(invoice.invoice_date) %></div>
+    </div>
+  </div>
+
+  <!-- BUYER INFORMATION -->
+  <div class="buyer-section">
+    <div class="buyer-row">
+      <div class="buyer-label">Buyer's Name:</div>
+      <div class="buyer-value"><strong><%= invoice.buyer_name || invoice.customer_name || '—' %></strong></div>
+    </div>
+    <div class="buyer-row">
+      <div class="buyer-label">Buyer's Address:</div>
+      <div class="buyer-value"><%= invoice.buyer_address || invoice.customer_address || '—' %></div>
+    </div>
+    <div class="buyer-row">
+      <div class="buyer-label">Buyer's PAN No:</div>
+      <div class="pan-boxes">
+        <% 
+          let pan = invoice.buyer_pan || invoice.customer_pan || '';
+          if (pan) { 
+            pan = pan.toUpperCase();
+            for (let i = 0; i < 10; i++) {
+              let char = pan[i] ? pan[i] : '';
+        %>
+              <div class="pan-box"><%= char %></div>
+        <% 
+            }
+          } else {
+            for (let i = 0; i < 10; i++) { 
+        %>
+              <div class="pan-box"></div>
+        <% 
+            }
+          }
+        %>
+      </div>
+    </div>
+    <div class="buyer-row">
+      <div class="buyer-label">Mode of Payment:</div>
+      <div class="buyer-value"><%= invoice.payment_method || 'Cash/Cheque/Credit/Other' %></div>
+    </div>
+  </div>
+
+  <!-- ITEMS TABLE -->
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:40px;">S.N.</th>
+        <th style="width:80px;">H.S. Code</th>
+        <th>Particulars / विवरण</th>
+        <th style="width:80px;" class="num">Quantity</th>
+        <th style="width:90px;" class="num">Rate per Unit (Rs.)</th>
+        <th style="width:100px;" class="num">Total Amount (Rs.)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% items.forEach((it, i) => { %>
+        <tr>
+          <td><%= i + 1 %></td>
+          <td></td>
+          <td><%= it.description %></td>
+          <td class="num"><%= it.quantity %></td>
+          <td class="num"><%= fmt.moneyPlain(it.rate) %></td>
+          <td class="num"><%= fmt.moneyPlain(it.amount) %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+
+  <!-- SUMMARY SECTION -->
+  <div class="summary-section">
+    <div class="amount-words">
+      <div style="font-weight: 600; margin-bottom: 8px;">Amount in Words:</div>
+      <div style="border-bottom: 1px dotted #999; padding: 8px 0; min-height: 20px;">
+        Rs. <span style="color: #666;">[Amount in Words will be displayed here]</span>
+      </div>
+    </div>
+    
+    <div class="totals-table">
+      <div class="summary-row">
+        <div class="summary-label">Gross Amount</div>
+        <div class="summary-value"><%= fmt.money(invoice.subtotal) %></div>
+      </div>
+      <% if (invoice.discount > 0) { %>
+        <div class="summary-row">
+          <div class="summary-label">% Discount</div>
+          <div class="summary-value">- <%= fmt.money(invoice.discount) %></div>
+        </div>
+        <div style="padding: 6px 0; border-bottom: 1px solid #000;">
+          <div style="font-weight: 600;">Taxable Value</div>
+          <div style="text-align: right;"><%= fmt.money(invoice.subtotal - invoice.discount) %></div>
+        </div>
+      <% } else { %>
+        <div style="padding: 6px 0; border-bottom: 1px solid #000;">
+          <div style="font-weight: 600;">Taxable Value</div>
+          <div style="text-align: right;"><%= fmt.money(invoice.subtotal) %></div>
+        </div>
+      <% } %>
+      <% if (invoice.apply_vat) { %>
+        <div class="summary-row">
+          <div class="summary-label">% VAT</div>
+          <div class="summary-value"><%= fmt.money(invoice.vat_amount) %></div>
+        </div>
+      <% } %>
+      <div class="summary-row total">
+        <div class="summary-label">Total Amount</div>
+        <div class="summary-value"><%= fmt.money(invoice.total) %></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNATURES -->
+  <div class="signature-section">
+    <div class="sig-block">
+      <div style="margin-bottom: 20px;">Customer's signature:</div>
+      <div>..............................</div>
+    </div>
+    <div class="sig-block">
+      <div style="margin-bottom: 20px;">Seller's Signature (or For <%= invoice.business_name %>)</div>
+      <div>..............................</div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    <strong>Goods sold would not be refundable E. & O.E.</strong><br>
+    <%= invoice.footer_note || 'Thank you for your business!' %>
+  </div>
+</div>
+</body>
+</html>

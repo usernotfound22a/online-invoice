@@ -1,0 +1,59 @@
+<%- include('../partials/header') %>
+<div class="page-header">
+  <h1><%= title %></h1>
+  <a href="/app/products" class="muted">← <%= t('products') %></a>
+</div>
+
+<div class="card form-card">
+  <form method="POST" action="<%= action %>">
+    <label><%= t('name') %> *</label>
+    <input type="text" name="name" required value="<%= product.name || '' %>">
+
+    <label><%= t('name_ne') %></label>
+    <input type="text" name="name_ne" value="<%= product.name_ne || '' %>" placeholder="नेपालीमा">
+
+    <label><%= t('description') %></label>
+    <textarea name="description" rows="2"><%= product.description || '' %></textarea>
+
+    <div class="grid-3">
+      <div>
+        <label><%= t('price') %> (Rs) *</label>
+        <input type="number" name="price" step="0.01" min="0" required value="<%= product.price || 0 %>">
+      </div>
+      <div>
+        <label><%= t('unit') %></label>
+        <select name="unit">
+          <% ['pcs','kg','gm','ltr','hr','service','plate','cup'].forEach(u => { %>
+            <option value="<%= u %>" <%= product.unit === u ? 'selected' : '' %>><%= u %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div>
+        <label><%= t('category') %></label>
+        <input type="text" name="category" value="<%= product.category || '' %>" placeholder="Grocery, F&B, Service...">
+      </div>
+    </div>
+
+    <div class="checkbox-row">
+      <label><input type="checkbox" name="vat_applicable" value="1" <%= product.vat_applicable !== 0 ? 'checked' : '' %>> <%= t('vat_applicable') %></label>
+      <label><input type="checkbox" name="track_stock" value="1" <%= product.track_stock !== 0 ? 'checked' : '' %>> <%= t('track_stock') %></label>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label><%= t('stock') %></label>
+        <input type="number" name="stock" step="0.01" value="<%= product.stock || 0 %>">
+      </div>
+      <div>
+        <label>Low-stock threshold</label>
+        <input type="number" name="low_stock_threshold" step="0.01" value="<%= product.low_stock_threshold || 0 %>">
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><%= t('save') %></button>
+      <a href="/app/products" class="btn btn-outline"><%= t('cancel') %></a>
+    </div>
+  </form>
+</div>
+<%- include('../partials/footer') %>

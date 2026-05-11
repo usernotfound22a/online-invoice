@@ -1,0 +1,79 @@
+<%- include('../partials/header') %>
+<div class="page-header">
+  <h1><%= t('admin') %> Dashboard</h1>
+  <p class="muted">Manage registered companies</p>
+</div>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label"><%= t('total_companies') %></div>
+    <div class="stat-value"><%= stats.total %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><%= t('active_companies') %></div>
+    <div class="stat-value success"><%= stats.active %></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label"><%= t('inactive_companies') %></div>
+    <div class="stat-value warning"><%= stats.inactive %></div>
+  </div>
+</div>
+
+<form method="GET" class="search-bar">
+  <input type="text" name="q" value="<%= q %>" placeholder="<%= t('search') %> by name or email...">
+  <select name="filter">
+    <option value="all" <%= filter === 'all' ? 'selected' : '' %>>All</option>
+    <option value="active" <%= filter === 'active' ? 'selected' : '' %>>Active only</option>
+    <option value="inactive" <%= filter === 'inactive' ? 'selected' : '' %>>Inactive only</option>
+  </select>
+  <button type="submit" class="btn btn-outline"><%= t('search') %></button>
+</form>
+
+<div class="card no-pad">
+  <% if (companies.length === 0) { %>
+    <div class="empty-state">
+      <p><%= t('no_data') %></p>
+    </div>
+  <% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th><%= t('company_name') %></th>
+        <th><%= t('email') %></th>
+        <th><%= t('registered_on') %></th>
+        <th><%= t('last_login') %></th>
+        <th><%= t('status') %></th>
+        <th class="actions-col"><%= t('actions') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% companies.forEach(c => { %>
+        <tr class="<%= !c.active ? 'row-inactive' : '' %>">
+          <td>
+            <strong><%= c.business_name %></strong>
+            <% if (c.business_name_ne) { %><div class="alt-name"><%= c.business_name_ne %></div><% } %>
+          </td>
+          <td><%= c.email %></td>
+          <td><%= fmt.date(c.created_at) %></td>
+          <td><%= c.last_login ? fmt.date(c.last_login) : t('never') %></td>
+          <td>
+            <% if (c.active) { %>
+              <span class="badge badge-paid"><%= t('company_active') %></span>
+            <% } else { %>
+              <span class="badge badge-overdue"><%= t('company_inactive') %></span>
+            <% } %>
+          </td>
+          <td class="actions">
+            <form method="POST" action="/admin/toggle/<%= c.id %>?q=<%= encodeURIComponent(q) %>&filter=<%= filter %>" style="display:inline">
+              <button type="submit" class="btn-icon <%= c.active ? 'danger' : 'success' %>">
+                <%= c.active ? 'Deactivate' : 'Activate' %>
+              </button>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+<%- include('../partials/footer') %>

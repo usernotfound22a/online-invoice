@@ -1,0 +1,141 @@
+<%- include('../partials/header') %>
+<div class="page-header-row">
+  <div>
+    <h1><%= invoice.invoice_number %></h1>
+    <p class="muted">
+      <span class="badge badge-<%= invoice.status %>"><%= invoice.status %></span>
+      <%= fmt.date(invoice.invoice_date) %>
+    </p>
+  </div>
+  <div class="header-actions">
+    <a href="/app/invoices/<%= invoice.id %>/print" target="_blank" class="btn btn-outline">🖨 <%= t('print') %></a>
+    <a href="/i/<%= invoice.public_id %>" target="_blank" class="btn btn-outline">🔗 <%= t('share_link') %></a>
+    <% if (invoice.customer_phone) { %>
+    <a href="https://wa.me/<%= invoice.customer_phone.replace(/[^\d]/g,'') %>?text=Invoice%20<%= invoice.invoice_number %>" target="_blank" class="btn btn-outline">💬 WhatsApp</a>
+    <% } %>
+    <form method="POST" action="/app/invoices/<%= invoice.id %>/delete" style="display:inline" onsubmit="return confirm('<%= t('confirm_delete') %>')">
+      <button type="submit" class="btn btn-outline danger"><%= t('delete') %></button>
+    </form>
+  </div>
+</div>
+
+<div class="grid-cols-2">
+  <div class="card">
+    <h2><%= t('bill_to') %></h2>
+    <div class="buyer-info">
+      <div class="buyer-field">
+        <label>Buyer's Name:</label>
+        <input type="text" class="buyer-input" id="buyer_name" value="<%= invoice.buyer_name || invoice.customer_name || '—' %>" readonly>
+        <button class="btn-edit-buyer" onclick="editBuyer('name', this)">✎</button>
+      </div>
+      <div class="buyer-field">
+        <label>Buyer's Address:</label>
+        <input type="text" class="buyer-input" id="buyer_address" value="<%= invoice.buyer_address || invoice.customer_address || '—' %>" readonly>
+        <button class="btn-edit-buyer" onclick="editBuyer('address', this)">✎</button>
+      </div>
+      <div class="buyer-field">
+        <label>Buyer's PAN:</label>
+        <input type="text" class="buyer-input" id="buyer_pan" value="<%= invoice.buyer_pan || invoice.customer_pan || '—' %>" readonly>
+        <button class="btn-edit-buyer" onclick="editBuyer('pan', this)">✎</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Payment</h2>
+    <table class="kv-table">
+      <tr><td><%= t('total') %></td><td class="num"><strong><%= fmt.money(invoice.total) %></strong></td></tr>
+      <tr><td><%= t('paid') %></td><td class="num"><%= fmt.money(invoice.paid_amount) %></td></tr>
+      <tr><td><%= t('outstanding') %></td><td class="num warning"><%= fmt.money(invoice.total - invoice.paid_amount) %></td></tr>
+      <% if (invoice.payment_method) { %><tr><td><%= t('payment_method') %></td><td><%= invoice.payment_method %></td></tr><% } %>
+    </table>
+
+    <% if (invoice.paid_amount < invoice.total && invoice.status !== 'cancelled') { %>
+    <form method="POST" action="/app/invoices/<%= invoice.id %>/payment" class="payment-form">
+      <h3>Record payment</h3>
+      <div class="grid-2">
+        <input type="number" name="amount" step="0.01" min="0.01" max="<%= invoice.total - invoice.paid_amount %>" value="<%= (invoice.total - invoice.paid_amount).toFixed(2) %>" required>
+        <select name="method" required>
+          <option>Cash</option>
+          <option>eSewa</option>
+          <option>Khalti</option>
+          <option>IME Pay</option>
+          <option>ConnectIPS</option>
+          <option>Bank Transfer</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Record payment</button>
+    </form>
+    <% } %>
+  </div>
+</div>
+
+<div class="card no-pad">
+  <h2 class="card-h2-pad">Items</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th><%= t('description') %></th>
+        <th class="num"><%= t('qty') %></th>
+        <th class="num"><%= t('rate') %></th>
+        <th class="num"><%= t('amount') %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% items.forEach((it, i) => { %>
+        <tr>
+          <td><%= i + 1 %></td>
+          <td><%= it.description %></td>
+          <td class="num"><%= it.quantity %></td>
+          <td class="num"><%= fmt.moneyPlain(it.rate) %></td>
+          <td class="num"><%= fmt.moneyPlain(it.amount) %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="4" class="num"><%= t('subtotal') %></td><td class="num"><%= fmt.money(invoice.subtotal) %></td></tr>
+      <% if (invoice.discount > 0) { %><tr><td colspan="4" class="num"><%= t('discount') %></td><td class="num">- <%= fmt.money(invoice.discount) %></td></tr><% } %>
+      <% if (invoice.apply_vat) { %><tr><td colspan="4" class="num"><%= t('vat') %> (<%= invoice.vat_rate %>%)</td><td class="num"><%= fmt.money(invoice.vat_amount) %></td></tr><% } %>
+      <tr class="total-row"><td colspan="4" class="num"><strong><%= t('total') %></strong></td><td class="num"><strong><%= fmt.money(invoice.total) %></strong></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<script>
+function editBuyer(field, btn) {
+  const input = document.getElementById('buyer_' + field);
+  const fieldDiv = input.closest('.buyer-field');
+  
+  if (input.readOnly) {
+    input.readOnly = false;
+    btn.textContent = '✓';
+    fieldDiv.classList.add('editing');
+  } else {
+    // Save the changes
+    const data = {};
+    data['buyer_' + field] = input.value;
+    
+    fetch('/app/invoices/<%= invoice.id %>/update-buyer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(result => {
+      if (result.success) {
+        input.readOnly = true;
+        btn.textContent = '✎';
+        fieldDiv.classList.remove('editing');
+        // Show success message
+        alert('Buyer information updated!');
+      } else {
+        alert('Error: ' + (result.error || 'Failed to update'));
+      }
+    })
+    .catch(err => {
+      alert('Error: ' + err.message);
+    });
+  }
+}
+</script>
+<%- include('../partials/footer') %>

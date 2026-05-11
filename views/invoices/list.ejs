@@ -1,0 +1,56 @@
+<%- include('../partials/header') %>
+<div class="page-header-row">
+  <div>
+    <h1><%= t('invoices') %></h1>
+    <p class="muted"><%= invoices.length %> total</p>
+  </div>
+  <a href="/app/invoices/new" class="btn btn-primary">+ <%= t('new_invoice') %></a>
+</div>
+
+<div class="filter-tabs">
+  <a href="/app/invoices" class="<%= !status ? 'active' : '' %>">All</a>
+  <a href="/app/invoices?status=draft" class="<%= status === 'draft' ? 'active' : '' %>">Draft</a>
+  <a href="/app/invoices?status=sent" class="<%= status === 'sent' ? 'active' : '' %>">Sent</a>
+  <a href="/app/invoices?status=paid" class="<%= status === 'paid' ? 'active' : '' %>">Paid</a>
+  <a href="/app/invoices?status=partial" class="<%= status === 'partial' ? 'active' : '' %>">Partial</a>
+  <a href="/app/invoices?status=overdue" class="<%= status === 'overdue' ? 'active' : '' %>">Overdue</a>
+</div>
+
+<div class="card no-pad">
+  <% if (invoices.length === 0) { %>
+    <div class="empty-state">
+      <p><%= t('no_data') %></p>
+      <a href="/app/invoices/new" class="btn btn-primary">+ <%= t('new_invoice') %></a>
+    </div>
+  <% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th><%= t('invoice_number') %></th>
+        <th><%= t('invoice_date') %></th>
+        <th><%= t('customer') %></th>
+        <th><%= t('status') %></th>
+        <th class="num"><%= t('total') %></th>
+        <th class="num"><%= t('paid') %></th>
+        <th class="actions-col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% invoices.forEach(inv => { %>
+        <tr>
+          <td data-label="Invoice #"><a href="/app/invoices/<%= inv.id %>" class="link-name"><%= inv.invoice_number %></a></td>
+          <td data-label="Date"><%= fmt.date(inv.invoice_date) %></td>
+          <td data-label="Customer"><%= inv.customer_name || '—' %></td>
+          <td data-label="Status"><span class="badge badge-<%= inv.status %>"><%= inv.status %></span></td>
+          <td class="num" data-label="Total"><%= fmt.moneyPlain(inv.total) %></td>
+          <td class="num" data-label="Paid"><%= fmt.moneyPlain(inv.paid_amount) %></td>
+          <td class="actions" data-label="Actions">
+            <a href="/app/invoices/<%= inv.id %>" class="btn-icon">View</a>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+<%- include('../partials/footer') %>

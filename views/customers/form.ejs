@@ -1,0 +1,46 @@
+<%- include('../partials/header') %>
+<div class="page-header">
+  <h1><%= title %></h1>
+  <a href="/app/customers" class="muted">← <%= t('customers') %></a>
+</div>
+
+<div class="card form-card">
+  <form method="POST" action="<%= action %>">
+    <label><%= t('name') %> *</label>
+    <input type="text" name="name" required value="<%= customer.name || '' %>">
+
+    <label><%= t('name_ne') %></label>
+    <input type="text" name="name_ne" value="<%= customer.name_ne || '' %>" placeholder="नेपालीमा">
+
+    <div class="grid-2">
+      <div>
+        <label><%= t('phone') %></label>
+        <input type="text" name="phone" value="<%= customer.phone || '' %>">
+      </div>
+      <div>
+        <label><%= t('email_optional') %></label>
+        <input type="email" name="email" value="<%= customer.email || '' %>">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <label><%= t('pan') %></label>
+        <input type="text" name="pan" value="<%= customer.pan || '' %>">
+      </div>
+      <div>
+        <label><%= t('address') %></label>
+        <input type="text" name="address" value="<%= customer.address || '' %>">
+      </div>
+    </div>
+
+    <label><%= t('notes') %></label>
+    <textarea name="notes" rows="3"><%= customer.notes || '' %></textarea>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><%= t('save') %></button>
+      <a href="/app/customers" class="btn btn-outline"><%= t('cancel') %></a>
+    </div>
+  </form>
+</div>
+<%- include('../partials/footer') %>
