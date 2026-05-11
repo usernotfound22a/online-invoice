@@ -380,6 +380,16 @@ textarea { resize: vertical; }
 @media (max-width: 768px) {
   /* Mobile Menu */
   .hamburger { display: block; }
+  
+  /* Product Form - Enhanced */
+  .form-card { max-width: 100%; padding: 16px; }
+  .form-card label { font-size: 14px; margin: 14px 0 8px; }
+  .form-card input, .form-card select, .form-card textarea {
+    font-size: 16px;
+    padding: 12px 14px;
+    min-height: 48px;
+  }
+  .form-card textarea { min-height: 100px; }
   .nav-inner { padding: 0 12px; height: 56px; }
   .nav-links {
     display: flex;

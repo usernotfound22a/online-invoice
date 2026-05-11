@@ -68,18 +68,34 @@ app.use((err, req, res, next) => {
   res.status(500).render('error', { title: 'Error', message: err.message || 'Something went wrong' });
 });
 
-// Get local network IP
+// Get local network IP - prioritize Wi-Fi over virtual adapters
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
+  let fallbackIP = '127.0.0.1';
+  
+  // First pass: look for Wi-Fi or Ethernet (real networks)
   for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      // Skip internal and non-IPv4 addresses
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
+    if (name.toLowerCase().includes('wi-fi') || name.toLowerCase().includes('ethernet') && !name.includes('Ethernet 2')) {
+      for (const iface of interfaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          return iface.address;
+        }
       }
     }
   }
-  return '127.0.0.1';
+  
+  // Second pass: any non-internal IPv4 (skip virtual adapters)
+  for (const name of Object.keys(interfaces)) {
+    if (!name.toLowerCase().includes('local area connection')) {
+      for (const iface of interfaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal && !name.includes('Ethernet 2')) {
+          fallbackIP = iface.address;
+        }
+      }
+    }
+  }
+  
+  return fallbackIP;
 }
 
 const localIP = getLocalIP();

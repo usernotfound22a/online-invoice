@@ -6,36 +6,41 @@
 
 <div class="card form-card">
   <form method="POST" action="<%= action %>">
+    
+    <div class="form-section-h">Basic Information</div>
     <label><%= t('name') %> *</label>
-    <input type="text" name="name" required value="<%= customer.name || '' %>">
+    <input type="text" name="name" required value="<%= customer.name || '' %>" placeholder="Customer name">
 
     <label><%= t('name_ne') %></label>
     <input type="text" name="name_ne" value="<%= customer.name_ne || '' %>" placeholder="नेपालीमा">
 
+    <div class="form-section-h">Contact Details</div>
     <div class="grid-2">
       <div>
         <label><%= t('phone') %></label>
-        <input type="text" name="phone" value="<%= customer.phone || '' %>">
+        <input type="text" name="phone" value="<%= customer.phone || '' %>" placeholder="e.g., 9841234567">
       </div>
       <div>
         <label><%= t('email_optional') %></label>
-        <input type="email" name="email" value="<%= customer.email || '' %>">
+        <input type="email" name="email" value="<%= customer.email || '' %>" placeholder="customer@example.com">
       </div>
     </div>
 
+    <div class="form-section-h">Tax & Address</div>
     <div class="grid-2">
       <div>
         <label><%= t('pan') %></label>
-        <input type="text" name="pan" value="<%= customer.pan || '' %>">
+        <input type="text" name="pan" value="<%= customer.pan || '' %>" placeholder="e.g., 6010399991">
       </div>
       <div>
         <label><%= t('address') %></label>
-        <input type="text" name="address" value="<%= customer.address || '' %>">
+        <input type="text" name="address" value="<%= customer.address || '' %>" placeholder="Street, City">
       </div>
     </div>
 
+    <div class="form-section-h">Notes</div>
     <label><%= t('notes') %></label>
-    <textarea name="notes" rows="3"><%= customer.notes || '' %></textarea>
+    <textarea name="notes" rows="4" placeholder="Additional notes about this customer"><%= customer.notes || '' %></textarea>
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary"><%= t('save') %></button>

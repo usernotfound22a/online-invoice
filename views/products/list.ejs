@@ -40,20 +40,20 @@
     <tbody>
       <% products.forEach(p => { %>
         <tr>
-          <td>
+          <td data-label="Product">
             <%= p.name %>
             <% if (p.name_ne) { %><span class="alt-name"><%= p.name_ne %></span><% } %>
           </td>
-          <td><%= p.category || '—' %></td>
-          <td class="num"><%= fmt.moneyPlain(p.price) %></td>
-          <td><%= p.unit %></td>
-          <td class="num">
+          <td data-label="Category"><%= p.category || '—' %></td>
+          <td class="num" data-label="Price"><%= fmt.moneyPlain(p.price) %></td>
+          <td data-label="Unit"><%= p.unit %></td>
+          <td class="num" data-label="Stock">
             <% if (p.track_stock) { %>
               <span class="<%= p.stock <= p.low_stock_threshold ? 'warning' : '' %>"><%= p.stock %></span>
             <% } else { %>—<% } %>
           </td>
-          <td><%= p.vat_applicable ? '✓' : '—' %></td>
-          <td class="actions">
+          <td data-label="VAT"><%= p.vat_applicable ? '✓' : '—' %></td>
+          <td class="actions" data-label="Actions">
             <a href="/app/products/<%= p.id %>/edit" class="btn-icon"><%= t('edit') %></a>
             <form method="POST" action="/app/products/<%= p.id %>/delete" style="display:inline" onsubmit="return confirm('<%= t('confirm_delete') %>')">
               <button type="submit" class="btn-icon danger"><%= t('delete') %></button>
