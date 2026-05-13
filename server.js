@@ -58,7 +58,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1d' })); // Cache static files
 
-// ============= REDIS SESSION STORE =============
+// ============= SESSION STORE =============
 let sessionStore;
 if (process.env.REDIS_URL) {
   const redisClient = redis.createClient({ url: process.env.REDIS_URL });
@@ -66,10 +66,11 @@ if (process.env.REDIS_URL) {
   sessionStore = new RedisStore({ client: redisClient });
   console.log('✅ Redis session store connected');
 } else {
-  // Fallback to memory store in development
-  const MemoryStore = require('express-session').MemoryStore;
-  sessionStore = new MemoryStore();
-  console.log('⚠️  Using memory session store (not recommended for production)');
+  // Use MongoDB session store — works across restarts and serverless platforms
+  const MongoStore = require('connect-mongo');
+  const mongoURL = process.env.MONGODB_URL || 'mongodb+srv://ghsarthak22_db_user:6884BZ2TPnktOVfj@cluster0.trteiqs.mongodb.net/pokhara_invoice?retryWrites=true&w=majority';
+  sessionStore = MongoStore.create({ mongoUrl: mongoURL, ttl: 7 * 24 * 60 * 60 });
+  console.log('✅ MongoDB session store connected');
 }
 
 // Session middleware with optimized settings
