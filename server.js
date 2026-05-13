@@ -39,9 +39,9 @@ const { mongoose } = require('./lib/mongodb');
 
 const app = express();
 
-// Ensure uploads dir exists
-const uploadsDir = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// Ensure uploads dir exists (use /tmp on serverless platforms)
+const uploadsDir = process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, 'public', 'uploads');
+try { if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true }); } catch (e) {}
 
 // ============= SECURITY & PERFORMANCE HEADERS =============
 app.use(helmet());

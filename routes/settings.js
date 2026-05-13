@@ -6,7 +6,7 @@ const router = express.Router();
 const { Business } = require('../lib/mongodb');
 
 const upload = multer({
-  dest: path.join(__dirname, '..', 'public', 'uploads'),
+  dest: process.env.VERCEL ? '/tmp/uploads' : path.join(__dirname, '..', 'public', 'uploads'),
   limits: { fileSize: 2 * 1024 * 1024 }
 });
 
