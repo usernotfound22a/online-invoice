@@ -13,6 +13,9 @@ COPY . .
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
+# Limit workers to 2 on Railway containers
+ENV WORKERS=2
+
 # Expose port
 EXPOSE 3000
 
