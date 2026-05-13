@@ -1,70 +1,80 @@
 // routes/dashboard.js
 const express = require('express');
 const router = express.Router();
-const db = require('../lib/db');
+const { Invoice, Customer, Product } = require('../lib/mongodb');
+const mongoose = require('mongoose');
 
-router.get('/', (req, res) => {
-  const bid = req.session.user.id;
+router.get('/', async (req, res) => {
+  try {
+    const bid = new mongoose.Types.ObjectId(req.session.user.id);
 
-  // Month start
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    // Month start
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const monthRevenue = db.prepare(`
-    SELECT COALESCE(SUM(paid_amount), 0) AS total
-    FROM invoices WHERE business_id = ? AND invoice_date >= ? AND status != 'cancelled'
-  `).get(bid, monthStart).total;
+    const monthRevenueResult = await Invoice.aggregate([
+      { $match: { business_id: bid, invoice_date: { $gte: monthStart }, status: { $ne: 'cancelled' } } },
+      { $group: { _id: null, total: { $sum: '$paid_amount' } } }
+    ]);
+    const monthRevenue = monthRevenueResult.length > 0 ? monthRevenueResult[0].total : 0;
 
-  const outstanding = db.prepare(`
-    SELECT COALESCE(SUM(total - paid_amount), 0) AS total
-    FROM invoices WHERE business_id = ? AND status IN ('sent', 'partial', 'overdue')
-  `).get(bid).total;
+    const outstandingResult = await Invoice.aggregate([
+      { $match: { business_id: bid, status: { $in: ['sent', 'partial', 'overdue'] } } },
+      { $group: { _id: null, total: { $sum: { $subtract: ['$total', '$paid_amount'] } } } }
+    ]);
+    const outstanding = outstandingResult.length > 0 ? outstandingResult[0].total : 0;
 
-  const invoiceCount = db.prepare(`
-    SELECT COUNT(*) AS c FROM invoices WHERE business_id = ? AND invoice_date >= ?
-  `).get(bid, monthStart).c;
+    const invoiceCount = await Invoice.countDocuments({ business_id: bid, invoice_date: { $gte: monthStart } });
 
-  const topCustomers = db.prepare(`
-    SELECT c.name, c.name_ne, COALESCE(SUM(i.total), 0) AS total
-    FROM customers c
-    LEFT JOIN invoices i ON i.customer_id = c.id AND i.status != 'cancelled'
-    WHERE c.business_id = ?
-    GROUP BY c.id
-    ORDER BY total DESC LIMIT 5
-  `).all(bid);
+    const topCustomers = await Invoice.aggregate([
+      { $match: { business_id: bid, status: { $ne: 'cancelled' } } },
+      { $group: { _id: '$customer_id', total: { $sum: '$total' } } },
+      { $sort: { total: -1 } },
+      { $limit: 5 },
+      { $lookup: { from: 'customers', localField: '_id', foreignField: '_id', as: 'customer' } },
+      { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+      { $project: { name: '$customer.name', name_ne: '$customer.name_ne', total: 1, _id: 0 } }
+    ]);
 
-  const lowStock = db.prepare(`
-    SELECT name, name_ne, stock, low_stock_threshold, unit
-    FROM products
-    WHERE business_id = ? AND track_stock = 1 AND stock <= low_stock_threshold
-    ORDER BY stock ASC LIMIT 5
-  `).all(bid);
+    const lowStock = await Product.find({ 
+      business_id: bid, 
+      track_stock: true, 
+      $expr: { $lte: ['$stock', '$low_stock_threshold'] } 
+    }).limit(5).sort({ stock: 1 });
 
-  const recentInvoices = db.prepare(`
-    SELECT i.*, c.name AS customer_name
-    FROM invoices i LEFT JOIN customers c ON i.customer_id = c.id
-    WHERE i.business_id = ?
-    ORDER BY i.created_at DESC LIMIT 8
-  `).all(bid);
+    const recentInvoices = await Invoice.find({ business_id: bid })
+      .populate('customer_id', 'name')
+      .sort({ created_at: -1 })
+      .limit(8);
 
-  // 6-month revenue trend
-  const revenueChart = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-    const monthLabel = d.toLocaleDateString('en-US', { month: 'short' });
-    const r = db.prepare(`
-      SELECT COALESCE(SUM(paid_amount), 0) AS total
-      FROM invoices WHERE business_id = ? AND invoice_date >= ? AND invoice_date < ?
-    `).get(bid, d.toISOString().slice(0, 10), end.toISOString().slice(0, 10)).total;
-    revenueChart.push({ month: monthLabel, total: r });
+    // 6-month revenue trend
+    const revenueChart = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const monthLabel = d.toLocaleDateString('en-US', { month: 'short' });
+      const revenueData = await Invoice.aggregate([
+        { $match: { business_id: bid, invoice_date: { $gte: d, $lt: end } } },
+        { $group: { _id: null, total: { $sum: '$paid_amount' } } }
+      ]);
+      const total = revenueData.length > 0 ? revenueData[0].total : 0;
+      revenueChart.push({ month: monthLabel, total });
+    }
+
+    res.render('dashboard', {
+      title: 'Dashboard',
+      monthRevenue,
+      outstanding,
+      invoiceCount,
+      topCustomers,
+      lowStock,
+      recentInvoices,
+      revenueChart
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    res.render('error', { title: 'Error', message: error.message });
   }
-
-  res.render('dashboard', {
-    title: 'Dashboard',
-    monthRevenue, outstanding, invoiceCount,
-    topCustomers, lowStock, recentInvoices, revenueChart
-  });
 });
 
 module.exports = router;

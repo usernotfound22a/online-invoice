@@ -1,7 +1,7 @@
 // routes/public.js
 const express = require('express');
 const router = express.Router();
-const db = require('../lib/db');
+const { Invoice, Customer, Business, InvoiceItem } = require('../lib/mongodb');
 
 router.get('/', (req, res) => {
   if (req.session.user) {
@@ -18,22 +18,26 @@ router.get('/lang/:code', (req, res) => {
 });
 
 // Public invoice view (shareable link)
-router.get('/i/:publicId', (req, res) => {
-  const inv = db.prepare(`
-    SELECT i.*, c.name AS customer_name, c.name_ne AS customer_name_ne,
-           c.address AS customer_address, c.phone AS customer_phone, c.pan AS customer_pan,
-           b.business_name, b.business_name_ne, b.address AS business_address,
-           b.pan AS business_pan, b.phone AS business_phone, b.logo_path, b.footer_note
-    FROM invoices i
-    LEFT JOIN customers c ON i.customer_id = c.id
-    JOIN businesses b ON i.business_id = b.id
-    WHERE i.public_id = ?
-  `).get(req.params.publicId);
+router.get('/i/:publicId', async (req, res) => {
+  try {
+    const inv = await Invoice.findOne({ public_id: req.params.publicId })
+      .populate('customer_id', 'name name_ne address phone pan')
+      .populate('business_id', 'business_name business_name_ne address pan phone logo_path footer_note');
 
-  if (!inv) return res.status(404).render('error', { title: 'Not found', message: 'Invoice not found' });
+    if (!inv) return res.status(404).render('error', { title: 'Not found', message: 'Invoice not found' });
 
-  const items = db.prepare('SELECT * FROM invoice_items WHERE invoice_id = ?').all(inv.id);
-  res.render('invoice-print', { invoice: inv, items, isPublic: true, title: inv.invoice_number });
+    const items = await InvoiceItem.find({ invoice_id: inv._id });
+    
+    res.render('invoice-print', { 
+      invoice: inv, 
+      items, 
+      isPublic: true, 
+      title: inv.invoice_number 
+    });
+  } catch (error) {
+    console.error('Public invoice error:', error);
+    res.status(500).render('error', { title: 'Error', message: error.message });
+  }
 });
 
 module.exports = router;

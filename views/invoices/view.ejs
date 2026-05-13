@@ -9,6 +9,7 @@
   </div>
   <div class="header-actions">
     <a href="/app/invoices/<%= invoice.id %>/print" target="_blank" class="btn btn-outline">🖨 <%= t('print') %></a>
+    <button onclick="saveInvoiceAsImage()" class="btn btn-outline">📸 Save as Image</button>
     <a href="/i/<%= invoice.public_id %>" target="_blank" class="btn btn-outline">🔗 <%= t('share_link') %></a>
     <% if (invoice.customer_phone) { %>
     <a href="https://wa.me/<%= invoice.customer_phone.replace(/[^\d]/g,'') %>?text=Invoice%20<%= invoice.invoice_number %>" target="_blank" class="btn btn-outline">💬 WhatsApp</a>
@@ -101,6 +102,7 @@
   </table>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 function editBuyer(field, btn) {
   const input = document.getElementById('buyer_' + field);
@@ -136,6 +138,41 @@ function editBuyer(field, btn) {
       alert('Error: ' + err.message);
     });
   }
+}
+
+function saveInvoiceAsImage() {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ Processing...';
+  
+  // Open print view and convert to image
+  const printWindow = window.open('/app/invoices/<%= invoice.id %>/print', '_blank');
+  
+  setTimeout(() => {
+    try {
+      html2canvas(printWindow.document.body, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      }).then(canvas => {
+        // Create download link
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = '<%= invoice.invoice_number %>.png';
+        link.click();
+        
+        btn.disabled = false;
+        btn.textContent = '📸 Save as Image';
+        printWindow.close();
+        alert('Invoice saved as image!');
+      });
+    } catch (err) {
+      console.error('Error:', err);
+      btn.disabled = false;
+      btn.textContent = '📸 Save as Image';
+      alert('Error saving image. Please try printing instead.');
+    }
+  }, 2000);
 }
 </script>
 <%- include('../partials/footer') %>

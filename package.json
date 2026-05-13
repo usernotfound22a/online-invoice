@@ -6,16 +6,31 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "init-db": "node init-db.js"
+    "prod": "NODE_ENV=production node server.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop all",
+    "pm2:restart": "pm2 restart all",
+    "pm2:logs": "pm2 logs pokhara-invoice",
+    "pm2:monit": "pm2 monit",
+    "init-indexes": "node init-db-indexes.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
-    "better-sqlite3": "^11.3.0",
-    "connect-sqlite3": "^0.9.15",
+    "compression": "^1.8.1",
+    "connect-mongo": "^6.0.0",
+    "connect-pg-simple": "^9.0.1",
+    "connect-redis": "^9.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "ejs": "^3.1.10",
     "express": "^4.21.0",
     "express-session": "^1.18.0",
-    "multer": "^1.4.5-lts.1"
+    "helmet": "^8.1.0",
+    "mongoose": "^9.6.2",
+    "multer": "^1.4.5-lts.1",
+    "pdfkit": "^0.18.0",
+    "pg": "^8.11.0",
+    "redis": "^5.12.1"
   },
   "engines": {
     "node": ">=18.0.0"

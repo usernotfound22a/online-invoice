@@ -1,38 +1,87 @@
-// server.js — Main entry point
+// server.js — Main entry point with clustering & Redis
+const cluster = require('cluster');
+const os = require('os');
 const express = require('express');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
 const fs = require('fs');
-const os = require('os');
+const compression = require('compression');
+const helmet = require('helmet');
+const cors = require('cors');
+const redis = require('redis');
+const RedisStore = require('connect-redis').default;
+require('dotenv').config();
+
+const PORT = process.env.PORT || 3000;
+const numCPUs = process.env.WORKERS || os.cpus().length;
+
+// ============= CLUSTERING FOR MULTI-CORE =============
+if (cluster.isPrimary && process.env.NODE_ENV === 'production') {
+  console.log(`\n⚙️  Master process running on PID ${process.pid}`);
+  console.log(`🚀 Spawning ${numCPUs} worker processes...\n`);
+  
+  for (let i = 0; i < numCPUs; i++) {
+    cluster.fork();
+  }
+  
+  cluster.on('exit', (worker, code, signal) => {
+    console.log(`❌ Worker ${worker.process.pid} died. Restarting...`);
+    cluster.fork();
+  });
+  
+  return;
+}
+
+// ============= WORKER PROCESS =============
+// Initialize MongoDB connection
+const { mongoose } = require('./lib/mongodb');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Ensure data dir exists
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+// Ensure uploads dir exists
 const uploadsDir = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// ============= SECURITY & PERFORMANCE HEADERS =============
+app.use(helmet());
+app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
+app.use(compression()); // Gzip compression
 
 // View engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
+app.set('view cache', process.env.NODE_ENV === 'production'); // Cache views in production
 
-// Middleware
+// ============= MIDDLEWARE =============
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.json({ limit: '10mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1d' })); // Cache static files
 
+// ============= REDIS SESSION STORE =============
+let sessionStore;
+if (process.env.REDIS_URL) {
+  const redisClient = redis.createClient({ url: process.env.REDIS_URL });
+  redisClient.connect().catch(console.error);
+  sessionStore = new RedisStore({ client: redisClient });
+  console.log('✅ Redis session store connected');
+} else {
+  // Fallback to memory store in development
+  const MemoryStore = require('express-session').MemoryStore;
+  sessionStore = new MemoryStore();
+  console.log('⚠️  Using memory session store (not recommended for production)');
+}
+
+// Session middleware with optimized settings
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.db', dir: dataDir }),
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || 'change-this-in-production-' + Math.random(),
   resave: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    secure: process.env.NODE_ENV === 'production' && process.env.HTTPS === 'true'
+    secure: process.env.NODE_ENV === 'production' && process.env.HTTPS === 'true',
+    sameSite: 'lax'
   }
 }));
 
@@ -45,6 +94,11 @@ app.use((req, res, next) => {
   res.locals.fmt = require('./lib/format');
   delete req.session.flash;
   next();
+});
+
+// ============= HEALTH CHECK =============
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', pid: process.pid, timestamp: new Date().toISOString() });
 });
 
 // Routes
@@ -100,11 +154,25 @@ function getLocalIP() {
 
 const localIP = getLocalIP();
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 Pokhara Invoice running`);
+// ============= START SERVER =============
+const server = app.listen(PORT, '0.0.0.0', () => {
+  const mode = cluster.isWorker ? `[Worker ${process.pid}]` : '[Master]';
+  console.log(`\n🚀 Pokhara Invoice running ${mode}`);
   console.log(`   Localhost:     http://localhost:${PORT}`);
   console.log(`   Network:       http://${localIP}:${PORT}`);
+  console.log(`   Health Check:  http://localhost:${PORT}/health`);
   console.log(`\n📧 Credentials:`);
   console.log(`   Admin login: admin@pokhara.local / admin1234`);
   console.log(`   Demo login:  demo@pokhara.local / demo1234\n`);
 });
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, gracefully shutting down...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+module.exports = app;

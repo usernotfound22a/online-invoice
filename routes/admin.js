@@ -1,44 +1,75 @@
-// routes/admin.js
+// routes/admin.js - MongoDB version
 const express = require('express');
 const router = express.Router();
-const db = require('../lib/db');
+const { Business } = require('../lib/mongodb');
 
-router.get('/', (req, res) => {
-  const q = req.query.q || '';
-  const filter = req.query.filter || 'all';
-  let where = 'is_admin = 0';
-  let params = [];
-  if (q) {
-    where += ' AND (business_name LIKE ? OR business_name_ne LIKE ? OR email LIKE ?)';
-    const like = '%' + q + '%';
-    params.push(like, like, like);
+router.get('/', async (req, res) => {
+  try {
+    const q = req.query.q || '';
+    const filter = req.query.filter || 'all';
+    
+    let filterObj = { is_admin: false };
+    if (q) {
+      const searchRegex = new RegExp(q, 'i');
+      filterObj.$or = [
+        { business_name: searchRegex },
+        { business_name_ne: searchRegex },
+        { email: searchRegex }
+      ];
+    }
+    if (filter === 'active') filterObj.active = true;
+    if (filter === 'inactive') filterObj.active = false;
+
+    const companies = await Business.find(filterObj)
+      .select('email business_name business_name_ne active created_at last_login')
+      .sort({ created_at: -1 });
+
+    const stats = await Business.aggregate([
+      { $match: { is_admin: false } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          active: { $sum: { $cond: ['$active', 1, 0] } }
+        }
+      }
+    ]);
+
+    const statsResult = stats.length > 0 ? stats[0] : { total: 0, active: 0 };
+    statsResult.inactive = statsResult.total - statsResult.active;
+
+    res.render('admin/dashboard', { title: 'Admin', companies, stats: statsResult, q, filter });
+  } catch (error) {
+    console.error('Admin dashboard error:', error);
+    res.render('error', { title: 'Error', message: error.message });
   }
-  if (filter === 'active') where += ' AND active = 1';
-  if (filter === 'inactive') where += ' AND active = 0';
-
-  const companies = db.prepare(`
-    SELECT id, email, business_name, business_name_ne, active, created_at, last_login
-    FROM businesses WHERE ${where}
-    ORDER BY created_at DESC
-  `).all(...params);
-
-  const stats = db.prepare(`
-    SELECT
-      COUNT(*) AS total,
-      COALESCE(SUM(active), 0) AS active,
-      COUNT(*) - COALESCE(SUM(active), 0) AS inactive
-    FROM businesses WHERE is_admin = 0
-  `).get();
-
-  res.render('admin/dashboard', { title: 'Admin', companies, stats, q, filter });
 });
 
-router.post('/toggle/:id', (req, res) => {
-  const company = db.prepare('SELECT active FROM businesses WHERE id = ? AND is_admin = 0').get(req.params.id);
-  if (!company) return res.redirect('/admin');
-  db.prepare('UPDATE businesses SET active = ? WHERE id = ?').run(company.active ? 0 : 1, req.params.id);
-  req.session.flash = { type: 'success', msg: res.locals.t('updated') };
-  res.redirect('/admin' + (req.query.q ? '?q=' + encodeURIComponent(req.query.q) : '') + (req.query.filter ? '&filter=' + req.query.filter : ''));
+router.post('/toggle/:id', async (req, res) => {
+  try {
+    const company = await Business.findOne({
+      _id: req.params.id,
+      is_admin: false
+    });
+
+    if (!company) return res.redirect('/admin');
+    
+    await Business.updateOne(
+      { _id: req.params.id },
+      { active: !company.active }
+    );
+
+    req.session.flash = { type: 'success', msg: res.locals.t('updated') };
+    
+    let redirectUrl = '/admin';
+    if (req.query.q) redirectUrl += '?q=' + encodeURIComponent(req.query.q);
+    if (req.query.filter) redirectUrl += (req.query.q ? '&' : '?') + 'filter=' + req.query.filter;
+    
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('Toggle company error:', error);
+    res.render('error', { title: 'Error', message: error.message });
+  }
 });
 
 module.exports = router;

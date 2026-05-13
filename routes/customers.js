@@ -1,80 +1,160 @@
-// routes/customers.js
+// routes/customers.js - MongoDB version
 const express = require('express');
 const router = express.Router();
-const db = require('../lib/db');
+const { Customer, Invoice } = require('../lib/mongodb');
+const mongoose = require('mongoose');
 
-router.get('/', (req, res) => {
-  const q = req.query.q || '';
-  const bid = req.session.user.id;
-  let customers;
-  if (q) {
-    const like = '%' + q + '%';
-    customers = db.prepare(`
-      SELECT * FROM customers WHERE business_id = ?
-        AND (name LIKE ? OR name_ne LIKE ? OR phone LIKE ? OR pan LIKE ?)
-      ORDER BY name
-    `).all(bid, like, like, like, like);
-  } else {
-    customers = db.prepare('SELECT * FROM customers WHERE business_id = ? ORDER BY name').all(bid);
+router.get('/', async (req, res) => {
+  try {
+    const q = req.query.q || '';
+    const bid = new mongoose.Types.ObjectId(req.session.user.id);
+    let customers;
+    
+    if (q) {
+      const searchRegex = new RegExp(q, 'i');
+      customers = await Customer.find({
+        business_id: bid,
+        $or: [
+          { name: searchRegex },
+          { name_ne: searchRegex },
+          { phone: searchRegex },
+          { pan: searchRegex }
+        ]
+      }).sort({ name: 1 });
+    } else {
+      customers = await Customer.find({ business_id: bid }).sort({ name: 1 });
+    }
+    
+    res.render('customers/list', { title: 'Customers', customers, q });
+  } catch (error) {
+    console.error('Customers list error:', error);
+    res.render('error', { title: 'Error', message: error.message });
   }
-  res.render('customers/list', { title: 'Customers', customers, q });
 });
 
 router.get('/new', (req, res) => {
   res.render('customers/form', { title: 'New Customer', customer: {}, action: '/app/customers' });
 });
 
-router.post('/', (req, res) => {
-  const { name, name_ne, address, phone, email, pan, notes } = req.body;
-  db.prepare(`
-    INSERT INTO customers (business_id, name, name_ne, address, phone, email, pan, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(req.session.user.id, name, name_ne || null, address || null, phone || null, email || null, pan || null, notes || null);
-  req.session.flash = { type: 'success', msg: res.locals.t('created') };
-  res.redirect('/app/customers');
+router.post('/', async (req, res) => {
+  try {
+    const { name, name_ne, address, phone, email, pan, notes } = req.body;
+    const bid = new mongoose.Types.ObjectId(req.session.user.id);
+    
+    await Customer.create({
+      business_id: bid,
+      name,
+      name_ne: name_ne || null,
+      address: address || null,
+      phone: phone || null,
+      email: email || null,
+      pan: pan || null,
+      notes: notes || null
+    });
+    
+    req.session.flash = { type: 'success', msg: res.locals.t('created') };
+    res.redirect('/app/customers');
+  } catch (error) {
+    console.error('Create customer error:', error);
+    res.render('error', { title: 'Error', message: error.message });
+  }
 });
 
-router.get('/:id', (req, res) => {
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND business_id = ?')
-    .get(req.params.id, req.session.user.id);
-  if (!customer) return res.redirect('/app/customers');
-  const invoices = db.prepare(`
-    SELECT * FROM invoices WHERE customer_id = ? AND business_id = ?
-    ORDER BY invoice_date DESC
-  `).all(req.params.id, req.session.user.id);
-  const stats = db.prepare(`
-    SELECT
-      COALESCE(SUM(total), 0) AS billed,
-      COALESCE(SUM(paid_amount), 0) AS paid,
-      COALESCE(SUM(total - paid_amount), 0) AS outstanding
-    FROM invoices WHERE customer_id = ? AND business_id = ? AND status != 'cancelled'
-  `).get(req.params.id, req.session.user.id);
-  res.render('customers/view', { title: customer.name, customer, invoices, stats });
+router.get('/:id', async (req, res) => {
+  try {
+    const customer = await Customer.findOne({
+      _id: req.params.id,
+      business_id: req.session.user.id
+    });
+    
+    if (!customer) return res.redirect('/app/customers');
+    
+    const invoices = await Invoice.find({
+      customer_id: customer._id,
+      business_id: customer.business_id
+    }).sort({ invoice_date: -1 });
+    
+    const statsResult = await Invoice.aggregate([
+      {
+        $match: {
+          customer_id: customer._id,
+          business_id: customer.business_id,
+          status: { $ne: 'cancelled' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          billed: { $sum: '$total' },
+          paid: { $sum: '$paid_amount' },
+          outstanding: { $sum: { $subtract: ['$total', '$paid_amount'] } }
+        }
+      }
+    ]);
+    
+    const stats = statsResult.length > 0 ? statsResult[0] : { billed: 0, paid: 0, outstanding: 0 };
+    
+    res.render('customers/view', { title: customer.name, customer, invoices, stats });
+  } catch (error) {
+    console.error('View customer error:', error);
+    res.render('error', { title: 'Error', message: error.message });
+  }
 });
 
-router.get('/:id/edit', (req, res) => {
-  const customer = db.prepare('SELECT * FROM customers WHERE id = ? AND business_id = ?')
-    .get(req.params.id, req.session.user.id);
-  if (!customer) return res.redirect('/app/customers');
-  res.render('customers/form', { title: 'Edit', customer, action: `/app/customers/${customer.id}/edit` });
+router.get('/:id/edit', async (req, res) => {
+  try {
+    const customer = await Customer.findOne({
+      _id: req.params.id,
+      business_id: req.session.user.id
+    });
+    
+    if (!customer) return res.redirect('/app/customers');
+    
+    res.render('customers/form', { title: 'Edit', customer, action: `/app/customers/${customer._id}/edit` });
+  } catch (error) {
+    console.error('Edit customer error:', error);
+    res.render('error', { title: 'Error', message: error.message });
+  }
 });
 
-router.post('/:id/edit', (req, res) => {
-  const { name, name_ne, address, phone, email, pan, notes } = req.body;
-  db.prepare(`
-    UPDATE customers SET name=?, name_ne=?, address=?, phone=?, email=?, pan=?, notes=?
-    WHERE id=? AND business_id=?
-  `).run(name, name_ne || null, address || null, phone || null, email || null, pan || null, notes || null,
-    req.params.id, req.session.user.id);
-  req.session.flash = { type: 'success', msg: res.locals.t('updated') };
-  res.redirect('/app/customers');
+router.post('/:id/edit', async (req, res) => {
+  try {
+    const { name, name_ne, address, phone, email, pan, notes } = req.body;
+    
+    await Customer.updateOne(
+      { _id: req.params.id, business_id: req.session.user.id },
+      {
+        name,
+        name_ne: name_ne || null,
+        address: address || null,
+        phone: phone || null,
+        email: email || null,
+        pan: pan || null,
+        notes: notes || null
+      }
+    );
+    
+    req.session.flash = { type: 'success', msg: res.locals.t('updated') };
+    res.redirect('/app/customers');
+  } catch (error) {
+    console.error('Update customer error:', error);
+    res.render('error', { title: 'Error', message: error.message });
+  }
 });
 
-router.post('/:id/delete', (req, res) => {
-  db.prepare('DELETE FROM customers WHERE id = ? AND business_id = ?')
-    .run(req.params.id, req.session.user.id);
-  req.session.flash = { type: 'success', msg: res.locals.t('deleted') };
-  res.redirect('/app/customers');
+router.post('/:id/delete', async (req, res) => {
+  try {
+    await Customer.deleteOne({
+      _id: req.params.id,
+      business_id: req.session.user.id
+    });
+    
+    req.session.flash = { type: 'success', msg: res.locals.t('deleted') };
+    res.redirect('/app/customers');
+  } catch (error) {
+    console.error('Delete customer error:', error);
+    res.render('error', { title: 'Error', message: error.message });
+  }
 });
 
 module.exports = router;
