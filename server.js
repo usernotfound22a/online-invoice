@@ -16,19 +16,20 @@ const PORT = process.env.PORT || 3000;
 const numCPUs = process.env.WORKERS || os.cpus().length;
 
 // ============= CLUSTERING FOR MULTI-CORE =============
-if (cluster.isPrimary && process.env.NODE_ENV === 'production') {
+// Only cluster when Redis is available — memory sessions don't survive across workers
+if (cluster.isPrimary && process.env.NODE_ENV === 'production' && process.env.REDIS_URL) {
   console.log(`\n⚙️  Master process running on PID ${process.pid}`);
   console.log(`🚀 Spawning ${numCPUs} worker processes...\n`);
-  
+
   for (let i = 0; i < numCPUs; i++) {
     cluster.fork();
   }
-  
+
   cluster.on('exit', (worker, code, signal) => {
     console.log(`❌ Worker ${worker.process.pid} died. Restarting...`);
     cluster.fork();
   });
-  
+
   return;
 }
 
