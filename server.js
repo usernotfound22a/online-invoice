@@ -130,57 +130,27 @@ app.use((err, req, res, next) => {
   res.status(500).render('error', { title: 'Error', message: err.message || 'Something went wrong' });
 });
 
-// Get local network IP - prioritize Wi-Fi over virtual adapters
-function getLocalIP() {
+// ============= START SERVER (skip on Vercel — it manages HTTP itself) =============
+if (!process.env.VERCEL) {
   const interfaces = os.networkInterfaces();
-  let fallbackIP = '127.0.0.1';
-  
-  // First pass: look for Wi-Fi or Ethernet (real networks)
-  for (const name of Object.keys(interfaces)) {
-    if (name.toLowerCase().includes('wi-fi') || name.toLowerCase().includes('ethernet') && !name.includes('Ethernet 2')) {
-      for (const iface of interfaces[name]) {
-        if (iface.family === 'IPv4' && !iface.internal) {
-          return iface.address;
-        }
-      }
+  let localIP = '127.0.0.1';
+  for (const ifaces of Object.values(interfaces)) {
+    for (const iface of ifaces) {
+      if (iface.family === 'IPv4' && !iface.internal) { localIP = iface.address; break; }
     }
   }
-  
-  // Second pass: any non-internal IPv4 (skip virtual adapters)
-  for (const name of Object.keys(interfaces)) {
-    if (!name.toLowerCase().includes('local area connection')) {
-      for (const iface of interfaces[name]) {
-        if (iface.family === 'IPv4' && !iface.internal && !name.includes('Ethernet 2')) {
-          fallbackIP = iface.address;
-        }
-      }
-    }
-  }
-  
-  return fallbackIP;
-}
 
-const localIP = getLocalIP();
-
-// ============= START SERVER =============
-const server = app.listen(PORT, '0.0.0.0', () => {
-  const mode = cluster.isWorker ? `[Worker ${process.pid}]` : '[Master]';
-  console.log(`\n🚀 Pokhara Invoice running ${mode}`);
-  console.log(`   Localhost:     http://localhost:${PORT}`);
-  console.log(`   Network:       http://${localIP}:${PORT}`);
-  console.log(`   Health Check:  http://localhost:${PORT}/health`);
-  console.log(`\n📧 Credentials:`);
-  console.log(`   Admin login: admin@pokhara.local / admin1234`);
-  console.log(`   Demo login:  demo@pokhara.local / demo1234\n`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, gracefully shutting down...');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 Pokhara Invoice running`);
+    console.log(`   Localhost:  http://localhost:${PORT}`);
+    console.log(`   Network:    http://${localIP}:${PORT}`);
+    console.log(`\n   Admin: admin@pokhara.local / admin1234`);
+    console.log(`   Demo:  demo@pokhara.local / demo1234\n`);
   });
-});
+
+  process.on('SIGTERM', () => {
+    server.close(() => process.exit(0));
+  });
+}
 
 module.exports = app;
