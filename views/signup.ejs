@@ -32,7 +32,21 @@
       <input type="text" name="address" value="<%= form.address || '' %>" placeholder="Lakeside, Pokhara">
       <button type="submit" class="btn btn-primary btn-block"><%= t('signup') %></button>
     </form>
-    <p class="auth-alt">Already have an account? <a href="/auth/login"><%= t('login') %></a></p>
+
+    <!-- Google Signup -->
+    <div style="margin: 20px 0; text-align: center;">
+      <p style="color: #999; font-size: 12px; margin-bottom: 10px;">Or sign up with</p>
+      <a href="/auth/google" class="btn btn-google" style="background: #fff; color: #333; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 500;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="1"></circle>
+          <circle cx="19" cy="12" r="1"></circle>
+          <circle cx="5" cy="12" r="1"></circle>
+        </svg>
+        Sign up with Google
+      </a>
+    </div>
+
+    <p class="auth-alt">Already have an account? <a href="/auth/login"><strong><%= t('login') %></strong></a></p>
   </div>
 </div>
 <%- include('partials/footer') %>

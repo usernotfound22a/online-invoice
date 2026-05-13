@@ -10,7 +10,21 @@
       <input type="password" name="password" required>
       <button type="submit" class="btn btn-primary btn-block"><%= t('login') %></button>
     </form>
-    <p class="auth-alt">Don't have an account? <a href="/auth/signup"><%= t('signup') %></a></p>
+
+    <!-- Google Login -->
+    <div style="margin: 20px 0; text-align: center;">
+      <p style="color: #999; font-size: 12px; margin-bottom: 10px;">Or continue with</p>
+      <a href="/auth/google" class="btn btn-google" style="background: #fff; color: #333; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 500;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="1"></circle>
+          <circle cx="19" cy="12" r="1"></circle>
+          <circle cx="5" cy="12" r="1"></circle>
+        </svg>
+        Login with Google
+      </a>
+    </div>
+
+    <p class="auth-alt"><%= t('signup') %>? <a href="/auth/signup"><strong><%= t('signup') %></strong></a></p>
     <div class="demo-creds">
       <strong>Demo credentials:</strong><br>
       Business: demo@pokhara.local / demo1234<br>

@@ -90,4 +90,38 @@ router.get('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/'));
 });
 
+// ============= GOOGLE OAUTH =============
+const passport = require('passport');
+require('../lib/passport-config');
+
+// Login with Google
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+// Google callback
+router.get('/google/callback',
+  passport.authenticate('google', { failureRedirect: '/auth/login' }),
+  (req, res) => {
+    try {
+      const business = req.user;
+      
+      req.session.user = {
+        id: business._id.toString(),
+        email: business.email,
+        business_name: business.business_name,
+        business_name_ne: business.business_name_ne || '',
+        is_admin: !!business.is_admin
+      };
+      
+      if (business.is_admin) {
+        res.redirect('/admin');
+      } else {
+        res.redirect('/app');
+      }
+    } catch (error) {
+      console.error('Google callback error:', error);
+      res.redirect('/auth/login?error=oauth_failed');
+    }
+  }
+);
+
 module.exports = router;

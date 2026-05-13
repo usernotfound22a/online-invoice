@@ -85,6 +85,12 @@ app.use(session({
   }
 }));
 
+// ============= PASSPORT INITIALIZATION =============
+const passport = require('passport');
+require('./lib/passport-config');
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Global locals for views
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
